@@ -1,19 +1,19 @@
 # Neural-Human-Translation-Quality-Estimation
 Deep Learning HTQE models hacked from 11 SOTA, such as TextCNN1D, RCNN, DPCNN, Transformers, neural architectures.
-# How to Use
-1. Configuration：
+## How to Use
+###1. Configuration：
 
 	```
 	pip install -r requirements.txt
 	```
 
-2. Confirm the nature of task: regression or classification：
+###2. Confirm the nature of task: regression or classification：
 
 	1. classification：classify translation into 'good' (1) or 'poor' (0)
 	2. regression: quantitative score translation per certain scale, e.g. percent scale, within the range 0-1, etc.
 
 
-3. prepare your data as jsonl format and wordembedding：
+###3. prepare your data as jsonl format and wordembedding：
    run dataPreprocess.py to generate train, valid and test jsonl file as well as wordembedding matrix
 
 	```
@@ -22,12 +22,20 @@ Deep Learning HTQE models hacked from 11 SOTA, such as TextCNN1D, RCNN, DPCNN, T
 	```
   
 
-4. build your own dataloader
+###4. build your own dataloader
 
-5. change the configuration files wherever is necessary
+###5. change the configuration files wherever is necessary
 
-6. run train.py
+###6. run train.py
 
 	```
 	python train.py
 	```
+
+## features
+- [x] tensorboard visualization (metrics, )
+- [x] transformers integrated [huggingface/transformers](https://github.com/huggingface/transformers)
+- [x] regression and classification compatible
+- [x] support multi-GPU
+## Acknowledgement
+This repo(https://github.com/jeffery0628/text_classification/) has saved me a lot of trouble of coding from scratch.  
