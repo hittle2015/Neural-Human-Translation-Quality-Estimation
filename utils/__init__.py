@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2020/12/27 2:52 PM
-# @Author  : David Yuan
-# @FileName: models.py
-# @github  : https://github.com/hittle2015
-# @Description:
 
 from utils.project_utils import *
 from utils.parse_config import ConfigParser

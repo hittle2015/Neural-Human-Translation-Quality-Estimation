@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2020/8/27 3:10 下午
-# @Author  : jeffery
+# @Time    : 2020/12/27 2:52 PM
+# @Author  : David Yuan
 # @FileName: metric.py
-# @website : http://www.jeffery.ink/
-# @github  : https://github.com/jeffery0628
+# @github  : https://github.com/hittle2015
 # @Description:
+
 import numpy as np
 import torch
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, roc_curve, auc
@@ -17,62 +17,11 @@ def tensor_to_numpy(preds, labels):
 
 def accuracy(preds, labels):
     """
-    每个标签都计算accuracy，然后求平均，不考虑数据均衡问题
+    averaged accuracy on all labels，irrespect of data imbalance
     """
     preds, labels = tensor_to_numpy(preds, labels)
     acc = accuracy_score(labels, preds, normalize=True)
     return acc
-
-
-def macro_precision(preds, labels):
-    """
-    每个标签都计算precision，然后求平均，不考虑数据均衡问题
-    """
-    preds, labels = tensor_to_numpy(preds, labels)
-    precision = precision_score(labels, preds, average='macro')
-    return precision
-
-
-def macro_recall(preds, labels):
-    """
-    每个标签都计算recall，然后求平均，不考虑数据均衡问题
-    """
-    preds, labels = tensor_to_numpy(preds, labels)
-    recall = recall_score(labels, preds, average='macro')
-    return recall
-
-
-def macro_f1(preds, labels):
-    """
-    每个标签都计算f1，然后求平均，不考虑数据均衡问题
-    """
-    preds, labels = tensor_to_numpy(preds, labels)
-    f1 = f1_score(labels, preds, average='macro')
-    return f1
-
-
-def micro_precision(preds, labels):
-    """
-    计算全数据的precision
-    """
-    preds, labels = tensor_to_numpy(preds, labels)
-    return precision_score(labels, preds, average='micro')
-
-
-def micro_recall(preds, labels):
-    """
-    计算全数据的recall
-    """
-    preds, labels = tensor_to_numpy(preds, labels)
-    return recall_score(labels, preds, average='micro')
-
-
-def micro_f1(preds, labels):
-    """
-    计算全数据的f1
-    """
-    preds, labels = tensor_to_numpy(preds, labels)
-    return f1_score(labels, preds, average='micro')
 
 
 

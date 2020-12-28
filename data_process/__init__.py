@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2020/8/20 5:08 下午
-# @Author  : jeffery
-# @FileName: __init__.py.py
-# @website : http://www.jeffery.ink/
-# @github  : https://github.com/jeffery0628
+# @Time    : 2020/12/27 2:52 PM
+# @Author  : David Yuan
+# @FileName: __init__.py
+# @github  : https://github.com/hittle2015
 # @Description:
 # import data_process.weibo_data_process as module_data_process  # weibo
 # import data_process.cnews_data_process as module_data_process    # cnews

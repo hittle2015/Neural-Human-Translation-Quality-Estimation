@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2020/8/20 5:03 下午
-# @Author  : jeffery
+# @Time    : 2020/12/27 2:52 PM
+# @Author  : David Yuan
 # @FileName: base_dataset.py
-# @website : http://www.jeffery.ink/
-# @github  : https://github.com/jeffery0628
+# @github  : https://github.com/hittle2015
 # @Description:
+
 from transformers import BertTokenizer, AutoTokenizer,AutoConfig
 from pathlib import Path
 # import tfrecord
