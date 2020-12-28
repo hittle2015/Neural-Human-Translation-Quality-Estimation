@@ -7,12 +7,13 @@ Deep Learning HTQE models hacked from 11 SOTA, such as TextCNN1D, RCNN, DPCNN, T
 	pip install -r requirements.txt
 	```
 
-2. Confirm the nature of task: regression or classification：
+2. Choose to do regression or classification：
 
-	1. classification：classify translation into 'good' (1) or 'poor' (0)
-	2. regression: quantitative score translation per certain scale, e.g. percent scale, within the range 0-1, etc.
+	1. classification：classify translation into 'good' (1) or 'poor' (0) or more categorical labels.
+	2. regression: quantitatively score translations per certain scale, e.g. percent scale, within the range 0-1, etc.In this case, remember to set the number of classes to be 1.
 
-3. prepare your data as jsonl format and wordembedding：
+
+3. prepare your data as jsonl format and word embedding for both languages：
    run dataPreprocess.py to generate train, valid and test jsonl file as well as wordembedding matrix
 
 	```
