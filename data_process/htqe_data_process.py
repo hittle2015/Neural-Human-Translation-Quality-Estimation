@@ -92,7 +92,7 @@ class EmbeddingDataset(BaseDataSet):
         text_lengths = torch.LongTensor(np.asarray(text_lengths))
 
         labels = torch.LongTensor(np.asarray(labels))
-        return input_ids,attention_masks,text_lengths,labels  # 添加None是为了与使用transformer的模型对齐。
+        return input_ids,attention_masks,text_lengths,labels  # add an random attention mask to align with transformer model encodings。
 
 
 class TransformersDataset(BaseDataSet):

@@ -57,7 +57,7 @@ class BaseDataSet(Dataset):
         if transformer_model:
             self.transformer_config = AutoConfig.from_pretrained(transformer_model,force_download=force_download,cache_dir=cache_dir)
             # self.tokenizer = AutoTokenizer.from_pretrained(transformer_model,force_download=force_download,cache_dir=cache_dir)
-            self.tokenizer = BertTokenizer.from_pretrained(transformer_model,config=self.transformer_config,force_download=force_download,cache_dir=cache_dir) # clue/albert_chinese_tiny
+            self.tokenizer = BertTokenizer.from_pretrained(transformer_model,config=self.transformer_config,force_download=force_download,cache_dir=cache_dir)
         if not self.feature_cache_file.exists() or overwrite_cache:
             self.features = self.save_features_to_cache()
         else:

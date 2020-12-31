@@ -6,8 +6,6 @@ import numpy as np
 import time
 from transformers import AutoTokenizer,AutoConfig #
 
-# transformer_config = AutoConfig.from_pretrained('bert-base-multilingual-cased',force_download=True,cache_dir='./transformer_models/.cache')
-# tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased',config=transformer_config)
 
 class Trainer(BaseTrainer):
     """
