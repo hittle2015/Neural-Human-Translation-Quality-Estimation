@@ -1,5 +1,5 @@
 # Neural-Human-Translation-Quality-Estimation
-Deep Learning HTQE models hacked from 11 SOTA, such as TextCNN1D, RCNN, DPCNN, Transformers, neural architectures.
+Deep Learning HTQE models hacked from 14 SOTA, such as TextCNN1D, RCNN, DPCNN, Transformers, neural architectures.
 ## How to Use
 1. Configuration：
 
