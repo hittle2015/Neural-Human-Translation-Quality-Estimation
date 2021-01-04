@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2020/12/27 2:52 PM
 # @Author  : David Yuan
-# @FileName: train.py
+# @FileName: models.py
 # @github  : https://github.com/hittle2015
 # @Description:
 
@@ -60,14 +60,18 @@ def run(config_fname):
 
 
 if __name__ == '__main__':
-    #run('configs/word_embedding_text_cnn.yml')
-    #run('configs/word_embedding_text_cnn_1d.yml')
-    #run('configs/word_embedding_fast_text.yml')
-    # run('configs/word_embedding_rnn.yml')
-    run('configs/word_embedding_rcnn.yml')
-    #run('configs/word_embedding_rnn_attention.yml')
-    #run('configs/word_embedding_dpcnn.yml')
-    #run('configs/transformers.yml')
-    # run('configs/transformers_cnn.yml')
-    #run('configs/transformers_rnn.yml')
-    #run('configs/transformers_rcnn.yml')
+    #run('configs/binary_classification/word_embedding_text_cnn.yml')
+    #run('configs/binary_classification/word_embedding_text_cnn_1d.yml')
+    #run('configs/binary_classification/word_embedding_fast_text.yml')
+    #run('configs/binary_classification/word_embedding_rnn.yml')
+    #run('configs/binary_classification/word_embedding_cnn_lstm_cat.yml') #cnn and rnn concatenated
+    #run('configs/binary_classification/word_embedding_cnn_lstm_stk.yml') # cnn and rnn stacked
+    run('configs/binary_classification/word_embedding_cnn_lstm_atn.yml') # cnn and rnn stacked with attention
+    #run('configs/binary_classification/word_embedding_rcnn.yml')
+    #run('configs/binary_classification/word_embedding_rnn_attention.yml')
+    #run('configs/binary_classification/word_embedding_dpcnn.yml')
+
+    #run('configs/binary_classification/transformers.yml')
+    #run('configs/binary_classification/transformers_cnn.yml')
+    #run('configs/binary_classification/transformers_rnn.yml')
+    #run('configs/binary_classification/transformers_rcnn.yml')
