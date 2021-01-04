@@ -5,20 +5,21 @@ global_parameters:
   - &is_train true #[true,false] # 如果不使用transformers model，该参数表示是否训练词向量，如果使用transformers model，该参数表示是否对transformers model 进行微调
   - &class_num 2
   # data related
-  - &dataset_type 'WeiboTransformersDataset'
-  - &data_dir 'data/weibo/passive_learning_data' # 定义锚
-  - &cache_dir 'data/weibo/.cache'
-  - &overwrite_cache false   # 是否覆盖已经处理好的数据缓存。当数据处理耗费时间较长时，通过配置该参数为false，可再下次加载数据时，直接加载处理好的数据缓存。从而节省不必要的时间浪费
-  - &transformer_model 'clue/albert_chinese_tiny' # 详情参见： https://huggingface.co/models
+  - &dataset_type 'TransformersDataset'
+  - &data_dir './htqe_data' # 定义锚
+  - &cache_dir './htqe_data/.cache'
+  - &overwrite_cache true   # 是否覆盖已经处理好的数据缓存。当数据处理耗费时间较长时，通过配置该参数为false，可再下次加载数据时，直接加载处理好的数据缓存。从而节省不必要的时间浪费
+  - &transformer_model 'bert-base-multilingual-uncased' # 详情参见： https://huggingface.co/models
   - &force_download false
-  - &num_workers 32
-  - &batch_size 64
+  - &max_len 510
+  - &num_workers 3
+  - &batch_size 5
 
 
 experiment_name: *model_arch_type
-num_gpu: 2                         # GPU数量
-device_id: '0,1'
-visual_device: '0,1'
+num_gpu: 1                         # GPU数量
+device_id: '0'
+visual_device: '0'
 main_device_id: '0'
 resume_path: null                         # path to latest checkpoint
 
@@ -43,7 +44,7 @@ train_set:
   type: *dataset_type
   args:
     data_dir: *data_dir
-    file_name: 'weibo_senti_train.jsonl'
+    file_name: 'htqe_train.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
     transformer_model: *transformer_model
@@ -51,12 +52,13 @@ train_set:
     shuffle: true
     batch_size: *batch_size   # data loader batch size
     num_workers: *num_workers # data loader num of worker
+    max_len: *max_len
 
 valid_set:
   type: *dataset_type
   args:
     data_dir: *data_dir
-    file_name: 'weibo_senti_valid.jsonl'
+    file_name: 'htqe_valid.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
     transformer_model: *transformer_model
@@ -64,12 +66,13 @@ valid_set:
     shuffle: true
     batch_size: *batch_size   # data loader batch size
     num_workers: *num_workers # data loader num of worker
+    max_len: *max_len
 
 test_set:
   type: *dataset_type
   args:
     data_dir: *data_dir
-    file_name: 'weibo_senti_test.jsonl'
+    file_name: 'htqe_test.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
     transformer_model: *transformer_model
@@ -77,6 +80,7 @@ test_set:
     shuffle: true
     batch_size: *batch_size   # data loader batch size
     num_workers: *num_workers # data loader num of worker
+    max_len: *max_len
 
 
 optimizer:
@@ -96,7 +100,7 @@ metrics:
   - "categorical_accuracy"
 
 trainer:
-  epochs: 100
+  epochs: 3
   save_dir: 'saved/'
   save_period: 1
   verbosity: 2

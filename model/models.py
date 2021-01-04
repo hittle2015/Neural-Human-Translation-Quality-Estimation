@@ -64,7 +64,9 @@ class TextCNN(BaseModel):
         # cat = [batch size, n_filters * len(filter_sizes)]
         # cat = self.fc(cat)
         # cat = cat.unsqueeze(dim=-1)
-        return self.fc(cat), cat
+        out = self.fc(cat)
+        print(out.shape)
+        return out, cat
 
 
 class TextCNN1d(BaseModel):
@@ -93,7 +95,10 @@ class TextCNN1d(BaseModel):
         # pooled_n = [batch size, n_filters]
         cat = self.dropout(torch.cat(pooled, dim=1))
         # cat = [batch size, n_filters * len(filter_sizes)]
-        return self.fc(cat), cat
+        out = self.fc(cat)
+        print(out.shape)
+
+        return out, cat
 
 
 class RnnModel(BaseModel):
@@ -130,8 +135,11 @@ class RnnModel(BaseModel):
                               bidirectional=bidirectional,
                               batch_first=batch_first,
                               dropout=dropout)
+        if self.bidirectional:
 
-        self.fc = nn.Linear(hidden_dim * n_layers, class_num)
+            self.fc = nn.Linear(hidden_dim * 2, class_num)
+        else:
+            self.fc = nn.Linear(hidden_dim, class_num)
 
         self.dropout = nn.Dropout(dropout)
         self.batch_first = batch_first
@@ -144,7 +152,7 @@ class RnnModel(BaseModel):
         # embedded = [batch size, sent len, emb dim]
 
         # pack sequence
-        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, sorted_seq_lengths, batch_first=self.batch_first)
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, sorted_seq_lengths.cpu(), batch_first=self.batch_first)
         self.rnn.flatten_parameters()
         if self.rnn_type in ['rnn', 'gru']:
             packed_output, hidden = self.rnn(packed_embedded)
@@ -157,11 +165,15 @@ class RnnModel(BaseModel):
         output, output_lengths = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=self.batch_first)
         # turn back into the original order 
         output = output[desorted_indices]
+        print(output.shape)
         # output = [batch_size,seq_len,hidden_dim * num_directionns ]
         batch_size, max_seq_len, hidden_dim = output.shape
         hidden = torch.mean(torch.reshape(hidden, [batch_size, -1, hidden_dim]), dim=1)
+        #print(hidden.shape)
         output = torch.mean(output, dim=1)
+        #print(output.shape)
         fc_input = self.dropout(output + hidden)
+        #print(fc_input.shape)
         out = self.fc(fc_input)
 
         return out, fc_input
@@ -270,6 +282,358 @@ class RCNNModel(BaseModel):
         return self.fc(output), output
 
 
+class CNN_LSTM_CAT(BaseModel):
+    """
+    Neural Network: CNN_BiLSTM
+    Detail: the input crosss cnn model and LSTM model independly, then concatenated as  a whole new input
+    """
+
+
+    def __init__(self, n_filters, filter_sizes, hidden_dim,rnn_type, n_layers, bidirectional,dropout, word_embedding, train, class_num, batch_first):
+        super().__init__()
+        # LSTM attributes
+        self.rnn_type = rnn_type.lower()
+        self.bidirectional = bidirectional
+        self.hidden_dim = hidden_dim
+        self.n_layers = n_layers
+        self.batch_first = batch_first
+        # embeddings
+        word_embedding = pickle.load(Path(word_embedding).open('rb'))
+        self.embedding_size = len(word_embedding.vectors[0])
+        self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(np.asarray(word_embedding.vectors)),
+                                                      freeze=(not train))
+        #CNN
+        self.convs = nn.ModuleList(
+            [nn.Conv2d(in_channels=1, out_channels=n_filters, kernel_size=(fs, self.embedding_size)) for fs in
+             filter_sizes])
+
+        #LSTM
+        if rnn_type == 'lstm':
+            self.rnn = nn.LSTM(self.embedding_size,
+                               hidden_dim,
+                               num_layers=n_layers,
+                               bidirectional=bidirectional,
+                               batch_first=batch_first,
+                               dropout=dropout)
+        elif rnn_type == 'gru':
+            self.rnn = nn.GRU(self.embedding_size,
+                              hidden_size=hidden_dim,
+                              num_layers=n_layers,
+                              bidirectional=bidirectional,
+                              batch_first=batch_first,
+                              dropout=dropout)
+        else:
+            self.rnn = nn.RNN(self.embedding_size,
+                              hidden_size=hidden_dim,
+                              num_layers=n_layers,
+                              bidirectional=bidirectional,
+                              batch_first=batch_first,
+                              dropout=dropout)
+        if self.bidirectional:
+            output_size = len(filter_sizes) * n_filters + hidden_dim * 2
+        else:
+            output_size = len(filter_sizes) * n_filters + hidden_dim 
+        print(output_size)
+        self.fc = nn.Linear(output_size, class_num)
+        #self.fc2 = nn.Linear (output_size//2, class_num)
+        # self.fc_ = nn.Linear(1,2)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, text, _, text_lengths):
+        #CNN
+        # text = [batch size, sent len]
+        embedded = self.embedding(text)
+        # embedded = [batch size, sent len, emb dim]
+        embedded = embedded.unsqueeze(1).float()
+        # embedded = [batch size, 1, sent_len, emb_dim]
+        #CNN
+        conved = [F.relu(conv(embedded)).squeeze(3) for conv in self.convs]
+        # conved_n = [batch size, n_filters, sent len - filter_sizes[n] + 1]
+     
+        pooled = [F.max_pool1d(conv, int(conv.shape[2])).squeeze(2) for conv in conved]
+        # pooled_n = [batch size, n_filters]
+        cat = torch.cat(pooled, dim=1)
+        cnn_out = self.dropout(cat)
+        #print(cnn_out.shape)
+        # cnn_out = [batch size, n_filters * len(filter_sizes)]
+
+        # LSTM
+        # sort sentences in the descending order
+        text, sorted_seq_lengths, desorted_indices = prepare_pack_padded_sequence(text, text_lengths)
+        # text = [batch size,sent len]
+        embedded = self.dropout(self.embedding(text)).float()
+        # embedded = [batch size, sent len, emb dim]
+    
+
+        # pack sequence
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, sorted_seq_lengths.cpu(), batch_first=self.batch_first)
+        self.rnn.flatten_parameters()
+        if self.rnn_type in ['rnn', 'gru']:
+            packed_output, hidden = self.rnn(packed_embedded)
+        else:
+            # output (seq_len, batch, num_directions * hidden_size)
+            # hidden (num_layers * num_directions, batch, hidden_size)
+            packed_output, (hidden, cell) = self.rnn(packed_embedded)
+
+        # unpack sequence
+        output, output_lengths = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=self.batch_first)
+        # turn back into the original order 
+        output = output[desorted_indices]
+        #
+
+        # output = [batch_size,seq_len,hidden_dim * num_directionns ]
+        batch_size, _, hidden_dim = output.shape
+        hidden = torch.mean(torch.reshape(hidden, [batch_size, -1, hidden_dim]), dim=1)
+        output = torch.mean(output, dim=1)
+        #print(output.shape)
+        bilstm_out = output + hidden
+    
+        #print(bilstm_out.shape)
+        #fc_input = self.dropout(output)# + hidden)
+        # fc_input [batch_size, hidden_dim * num_directions,]
+
+        # CNN and BiLSTM CAT
+    
+        cnn_lstm_out = torch.cat((cnn_out, bilstm_out), 1)
+     
+        #print(cnn_lstm_out.shape)
+      
+
+        # linear
+        cnn_lstm_out = self.fc(F.tanh(cnn_lstm_out))
+        #cnn_lstm_out = self.fc2(F.tanh(cnn_lstm_out))
+        #print (cnn_lstm_out.shape)
+       
+
+        # output
+        logit = cnn_lstm_out
+        #print(logit.shape)
+        return logit, cnn_lstm_out
+
+class CNN_LSTM_STK(BaseModel):
+    """
+    Neural Network: CNN_BiLSTM
+    Detail: the input across cnn model works as the input of LSTM model, i.e. two models are stacked
+    """
+
+
+    def __init__(self, n_filters, filter_sizes, hidden_dim,rnn_type, n_layers, bidirectional,dropout, word_embedding, train, class_num, batch_first):
+        super().__init__()
+        # LSTM attributes
+        self.rnn_type = rnn_type.lower()
+        self.bidirectional = bidirectional
+        self.hidden_dim = hidden_dim
+        self.n_layers = n_layers
+        self.batch_first = batch_first
+        # embeddings
+        word_embedding = pickle.load(Path(word_embedding).open('rb'))
+        self.embedding_size = len(word_embedding.vectors[0])
+        self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(np.asarray(word_embedding.vectors)),
+                                                      freeze=(not train))
+        #CNN
+        self.convs = nn.ModuleList(
+            [nn.Conv2d(in_channels=1, out_channels=n_filters, kernel_size=(fs, self.embedding_size)) for fs in
+             filter_sizes])
+        input_size = n_filters * len(filter_sizes)
+        #LSTM
+        if rnn_type == 'lstm':
+            self.rnn = nn.LSTM(input_size,
+                               hidden_dim,
+                               num_layers=n_layers,
+                               bidirectional=bidirectional,
+                               batch_first=batch_first,
+                               dropout=dropout)
+        elif rnn_type == 'gru':
+            self.rnn = nn.GRU(input_size,
+                              hidden_size=hidden_dim,
+                              num_layers=n_layers,
+                              bidirectional=bidirectional,
+                              batch_first=batch_first,
+                              dropout=dropout)
+        else:
+            self.rnn = nn.RNN(input_size,
+                              hidden_size=hidden_dim,
+                              num_layers=n_layers,
+                              bidirectional=bidirectional,
+                              batch_first=batch_first,
+                              dropout=dropout)
+        if self.bidirectional:
+            output_size =  hidden_dim * 2
+        else:
+            output_size =  hidden_dim 
+        #print(output_size)
+        self.fc = nn.Linear(output_size, class_num)
+
+ 
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, text, _, text_lengths):
+        #CNN
+        # text = [batch size, sent len]
+        embedded = self.embedding(text)
+        # embedded = [batch size, sent len, emb dim]
+        embedded = embedded.unsqueeze(1).float()
+        # embedded = [batch size, 1, sent_len, emb_dim]
+        #CNN
+        conved = [F.relu(conv(embedded)).squeeze(3) for conv in self.convs]
+        # conved_n = [batch size, n_filters, sent len - filter_sizes[n] + 1]
+     
+        pooled = [F.max_pool1d(conv, int(conv.shape[2])).squeeze(2) for conv in conved]
+        # pooled_n = [batch size, n_filters]
+        cat = torch.cat(pooled, dim=1)
+        cnn_out = self.dropout(cat)
+        cnn_out = cnn_out.unsqueeze(1)
+
+        print(cnn_out.shape)
+        # cnn_out = [batch size, input_size]
+
+        # LSTM
+
+        self.rnn.flatten_parameters()
+        if self.rnn_type in ['rnn', 'gru']:
+            rnn_output, hidden = self.rnn(cnn_out)
+        else:
+            # output (seq_len, batch, num_directions * hidden_size)
+            # hidden (num_layers * num_directions, batch, hidden_size)
+            rnn_output, (hidden, cell) = self.rnn(cnn_out)
+
+        # rnn_output = [batch_size,seq_len,hidden_dim * num_directionns ]
+    
+        cnn_lstm_out = self.dropout(rnn_output)
+        cnn_lstm_out = cnn_lstm_out.squeeze(1)
+     
+        #print(cnn_lstm_out.shape)
+      
+
+        # linear
+        cnn_lstm_out = self.fc(F.tanh(cnn_lstm_out))
+        #cnn_lstm_out = self.fc2(F.tanh(cnn_lstm_out))
+        #print (cnn_lstm_out.shape)
+       
+
+        # output
+        logit = cnn_lstm_out
+        #print(logit.shape)
+        return logit, cnn_lstm_out
+
+class CNN_LSTM_ATN(BaseModel):
+    """
+    Neural Network: CNN_BiLSTM
+    Detail: the input across cnn model works as the input of LSTM model, i.e. two models are stacked
+    """
+
+
+    def __init__(self, n_filters, filter_sizes, hidden_dim,rnn_type, n_layers, bidirectional,dropout, word_embedding, train, class_num, batch_first):
+        super().__init__()
+        # LSTM attributes
+        self.rnn_type = rnn_type.lower()
+        self.bidirectional = bidirectional
+        self.hidden_dim = hidden_dim
+        self.n_layers = n_layers
+        self.batch_first = batch_first
+        # embeddings
+        word_embedding = pickle.load(Path(word_embedding).open('rb'))
+        self.embedding_size = len(word_embedding.vectors[0])
+        self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(np.asarray(word_embedding.vectors)),
+                                                      freeze=(not train))
+        #CNN
+        self.convs = nn.ModuleList(
+            [nn.Conv2d(in_channels=1, out_channels=n_filters, kernel_size=(fs, self.embedding_size)) for fs in
+             filter_sizes])
+        input_size = n_filters * len(filter_sizes)
+        #LSTM
+        if rnn_type == 'lstm':
+            self.rnn = nn.LSTM(input_size,
+                               hidden_dim,
+                               num_layers=n_layers,
+                               bidirectional=bidirectional,
+                               batch_first=batch_first,
+                               dropout=dropout)
+        elif rnn_type == 'gru':
+            self.rnn = nn.GRU(input_size,
+                              hidden_size=hidden_dim,
+                              num_layers=n_layers,
+                              bidirectional=bidirectional,
+                              batch_first=batch_first,
+                              dropout=dropout)
+        else:
+            self.rnn = nn.RNN(input_size,
+                              hidden_size=hidden_dim,
+                              num_layers=n_layers,
+                              bidirectional=bidirectional,
+                              batch_first=batch_first,
+                              dropout=dropout)
+        if self.bidirectional:
+            output_size =  hidden_dim * 2
+        else:
+            output_size =  hidden_dim 
+        #print(output_size)
+        self.w = nn.Parameter(torch.randn(output_size), requires_grad=True)
+        self.fc = nn.Linear(output_size, class_num)
+
+        self.tanh = nn.Tanh()
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, text, _, text_lengths):
+        #CNN
+        # text = [batch size, sent len]
+        embedded = self.embedding(text)
+        # embedded = [batch size, sent len, emb dim]
+        embedded = embedded.unsqueeze(1).float()
+        # embedded = [batch size, 1, sent_len, emb_dim]
+        #CNN
+        conved = [F.relu(conv(embedded)).squeeze(3) for conv in self.convs]
+        # conved_n = [batch size, n_filters, sent len - filter_sizes[n] + 1]
+     
+        pooled = [F.max_pool1d(conv, int(conv.shape[2])).squeeze(2) for conv in conved]
+        # pooled_n = [batch size, n_filters]
+        cat = torch.cat(pooled, dim=1)
+        cnn_out = self.dropout(cat)
+        cnn_out = cnn_out.unsqueeze(1)
+
+        #print(cnn_out.shape)
+        # cnn_out = [batch size, input_size]
+
+        # LSTM
+
+        self.rnn.flatten_parameters()
+        if self.rnn_type in ['rnn', 'gru']:
+            rnn_output, hidden = self.rnn(cnn_out)
+        else:
+            # output (seq_len, batch, num_directions * hidden_size)
+            # hidden (num_layers * num_directions, batch, hidden_size)
+            rnn_output, (hidden, cell) = self.rnn(cnn_out)
+
+        # rnn_output = [batch_size,seq_len,hidden_dim * num_directionns ]
+    
+        cnn_lstm_out = self.dropout(rnn_output)
+        #cnn_lstm_out = cnn_lstm_out.squeeze(1)
+     
+        #print(cnn_lstm_out.shape)
+
+        alpha = F.softmax(torch.matmul(self.tanh(cnn_lstm_out), self.w), dim=0).unsqueeze(-1)  # dim=0表示针对文本中的每个词的输出softmax
+        output_attention = cnn_lstm_out * alpha
+        #print(alpha.shape, output_attention.shape)
+
+        output_attention = torch.sum(output_attention, dim=1)
+        cnn_lstm_out = torch.sum(cnn_lstm_out, dim=1)
+        #print(cnn_lstm_out.shape)
+
+      
+
+        # linear
+        cnn_lstm_out = self.fc(F.tanh(cnn_lstm_out * output_attention))
+        #cnn_lstm_out = self.fc2(F.tanh(cnn_lstm_out))
+        #print (cnn_lstm_out.shape)
+       
+
+        # output
+        logit = cnn_lstm_out
+        #print(logit.shape)
+        return logit, cnn_lstm_out
+
+
+
 class RnnAttentionModel(BaseModel):
     def __init__(self, rnn_type, hidden_dim, class_num, n_layers, bidirectional, dropout, word_embedding, train,
                  batch_first):
@@ -309,7 +673,7 @@ class RnnAttentionModel(BaseModel):
         self.tanh1 = nn.Tanh()
         self.tanh2 = nn.Tanh()
         # self.u = nn.Parameter(torch.Tensor(self.hidden_dim * 2,self.hidden_dim*2))
-        self.w = nn.Parameter(torch.randn(hidden_dim), requires_grad=True)
+        #self.w = nn.Parameter(torch.randn(hidden_dim), requires_grad=True)
 
         self.dropout = nn.Dropout(dropout)
         if bidirectional:
@@ -415,26 +779,38 @@ class TransformersModel(BaseModel):
 
     def __init__(self, transformer_model, cache_dir, force_download, is_train,  class_num):
         super(TransformersModel, self).__init__()
-        self.transformer_config = AutoConfig.from_pretrained(transformer_model, cache_dir=cache_dir,
+        self.transformer_config = AutoConfig.from_pretrained(transformer_model, cache_dir=cache_dir,output_attentions=True, output_hidden_states=True,
                                                              force_download=force_download)
-        self.transformer_model = AutoModel.from_pretrained(transformer_model, config=self.transformer_config,
+        self.transformer_model = AutoModelForSequenceClassification.from_pretrained(transformer_model, config=self.transformer_config,
                                                            cache_dir=cache_dir, force_download=force_download)
 
         # whether to continue training the transformers params
         for name, param in self.transformer_model.named_parameters():
             param.requires_grad = is_train
 
-        self.fc = nn.Linear(self.transformer_model.config.to_dict()['hidden_size'], class_num)
+        #self.fc = nn.Linear(self.transformer_model.config.to_dict()['hidden_size'], class_num)
 
     def forward(self, input_ids, attention_masks, text_lengths):
-        sentence = self.transformer_model(input_ids, attention_mask=attention_masks)
-        # sentence = torch.sum(sentence,dim=1)   # cls 分类能力不佳
-        out, pooler = sentence.last_hidden_state, sentence.pooler_output
-        batch_size, text_length, hidden_dim = sentence.last_hidden_state.shape
+        #sentence = self.transformer_model(input_ids, attention_mask=attention_masks)
+        output = self.transformer_model(input_ids, attention_mask=attention_masks)
+        #print(output)
+        logits, attentions = output.logits, output.attentions
+        # sentence = torch.sum(sentence,dim=1)   
+        #out, pooler = sentence.last_hidden_state, sentence.pooler_output
+        print(logits.shape)
+        #batch_size, text_length, hidden_dim = sentence.last_hidden_state.shape
         # average/sum  (mean is better than sum!!!!) the last hidden layer as input for next linear layer ()
-        output = torch.mean(torch.reshape(out, [batch_size, -1, hidden_dim]), dim=1)
-        output = self.fc(output)
-        return output, pooler
+        #out = out.unsqueeze(1)
+        #output = torch.reshape(out, [batch_size, -1, hidden_dim])
+       
+        #output = self.fc(out)
+     
+        #output = output.unsqueeze(0).view(output.size(0), -1)
+        #output = output.squeeze(1)
+        #output  = F.softmax(output, dim=0)
+        #output = torch.squeeze(output,0)
+        #print(output.shape)
+        return logits, attentions
 
 class TransformersCNN(nn.Module):
 
@@ -472,6 +848,7 @@ class TransformersCNN(nn.Module):
         out = torch.cat([self.conv_and_pool(out, conv) for conv in self.convs], 1)
         out_embedding = self.dropout(out)
         out = self.fc_cnn(out_embedding)
+        print(out.shape)
         return out, out_embedding
 
 

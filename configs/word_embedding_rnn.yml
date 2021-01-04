@@ -6,19 +6,19 @@ global_parameters:
   - &dropout 0.5
   - &class_num 2
   # data related
-  - &dataset_type 'WeiboEmbeddingDataset'
-  - &data_dir 'data/weibo/passive_learning_data' # 定义锚
-  - &cache_dir 'data/weibo/.cache'
+  - &dataset_type 'EmbeddingDataset'
+  - &data_dir './htqe_data/' # 定义锚
+  - &cache_dir './htqe_data/.cache'
   - &overwrite_cache true
-  - &word_embedding 'data/word_embedding/.cache/weibo_word_embedding.pkl' # [weibo_word_embedding.pkl, weibo_char_embedding.pkl]
+  - &word_embedding './word_embedding/.cache/htqe_word_embedding.pkl' # [weibo_word_embedding.pkl, weibo_char_embedding.pkl]
   - &num_workers 16
-  - &batch_size 2048
+  - &batch_size 10
 
 
 experiment_name: *model_arch_type
-num_gpu: 3                         # GPU数量
-device_id: '0,1,2'
-visual_device: '0,1,2'
+num_gpu: 1                         # GPU数量
+device_id: '0'
+visual_device: '0'
 main_device_id: '0'
 resume_path: null                         # path to latest checkpoint
 
@@ -32,7 +32,7 @@ model_arch:
     # rnn parameters
     rnn_type: 'lstm'  # [rnn,lstm,gru]
     hidden_dim: 256
-    n_layers: 2
+    n_layers: 4
     bidirectional: true
     batch_first: true
     class_num: *class_num
@@ -41,7 +41,7 @@ train_set:
   type: *dataset_type
   args:
     data_dir: *data_dir
-    file_name: 'weibo_senti_train_.jsonl'
+    file_name: 'htqe_train.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
     word_embedding: *word_embedding
@@ -53,7 +53,7 @@ valid_set:
   type: *dataset_type
   args:
     data_dir: *data_dir
-    file_name: 'weibo_senti_valid.jsonl'
+    file_name: 'htqe_valid.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
     word_embedding: *word_embedding
@@ -65,7 +65,7 @@ test_set:
   type: *dataset_type
   args:
     data_dir: *data_dir
-    file_name: 'weibo_senti_test.jsonl'
+    file_name: 'htqe_test.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
     word_embedding: *word_embedding
@@ -91,7 +91,7 @@ metrics:
   - "categorical_accuracy"
 
 trainer:
-  epochs: 100
+  epochs: 3
   save_dir: 'saved/'
   save_period: 1
   verbosity: 2

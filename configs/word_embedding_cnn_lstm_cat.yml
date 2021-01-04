@@ -1,23 +1,22 @@
 # global parameters
 global_parameters:
   # model related
-  - &model_arch_type 'TransformersModel'
-  - &is_train true #[true,false] # 如果不使用transformers model，该参数表示是否训练词向量，如果使用transformers model，该参数表示是否对transformers model 进行微调
+  - &model_arch_type 'CNN_LSTM_CAT'  # 可选的模型['FastText'，'TextCNN'，'']
+  - &train true #[true,false] # 如果不使用transformers model，该参数表示是否训练词向量，如果使用transformers model，该参数表示是否对transformers model 进行微调
+  - &dropout 0.5
   - &class_num 2
   # data related
-  - &dataset_type 'TransformersDataset'
-  - &data_dir './htqe_data/' # 定义锚
-  - &cache_dir './htqe_data/.cache'
-  - &overwrite_cache true   # 是否覆盖已经处理好的数据缓存。当数据处理耗费时间较长时，通过配置该参数为false，可再下次加载数据时，直接加载处理好的数据缓存。从而节省不必要的时间浪费
-  - &transformer_model 'bert-base-multilingual-uncased' # 详情参见： https://huggingface.co/models ['clue/albert_chinese_tiny','hfl/chinese-bert-wwm']
-  - &force_download false
+  - &dataset_type 'EmbeddingDataset'
+  - &data_dir './htqe_data'
+  - &cache_dir './transformer_models/.cache'
+  - &overwrite_cache true
+  - &word_embedding './word_embedding/.cache/htqe_word_embedding.pkl' # [weibo_word_embedding.pkl, weibo_char_embedding.pkl]
   - &num_workers 16
-  - &max_len 510
-  - &batch_size 3
+  - &batch_size 10
 
 
 experiment_name: *model_arch_type
-num_gpu: 1                        # GPU数量
+num_gpu: 1                         # GPU数量
 device_id: '0'
 visual_device: '0'
 main_device_id: '0'
@@ -27,10 +26,22 @@ resume_path: null                         # path to latest checkpoint
 model_arch:
   type: *model_arch_type
   args:
-    transformer_model: *transformer_model
-    cache_dir: *cache_dir
-    force_download: *force_download
-    is_train: *is_train
+    word_embedding: *word_embedding
+    train: *train
+    dropout: *dropout
+    #cnn parameters
+    n_filters: 100
+    filter_sizes:
+      - 3
+      - 5
+      - 7
+    dropout: 0.5
+    # rnn parameters
+    rnn_type: 'lstm'  # [rnn,lstm,gru]
+    hidden_dim: 512
+    n_layers: 2
+    bidirectional: true
+    batch_first: true
     class_num: *class_num
 
 train_set:
@@ -40,26 +51,24 @@ train_set:
     file_name: 'htqe_train.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
-    transformer_model: *transformer_model
-    force_download: *force_download
+    word_embedding: *word_embedding
     shuffle: true
     batch_size: *batch_size   # data loader batch size
     num_workers: *num_workers # data loader num of worker
-    max_len: *max_len
+
 
 valid_set:
   type: *dataset_type
   args:
     data_dir: *data_dir
-    file_name: 'htqe_valid.jsonl'
+    file_name: 'htqe_test.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
-    transformer_model: *transformer_model
-    force_download: *force_download
+    word_embedding: *word_embedding
     shuffle: true
     batch_size: *batch_size   # data loader batch size
     num_workers: *num_workers # data loader num of worker
-    max_len: *max_len
+
 
 test_set:
   type: *dataset_type
@@ -68,12 +77,11 @@ test_set:
     file_name: 'htqe_test.jsonl'
     cache_dir: *cache_dir
     overwrite_cache: *overwrite_cache
-    transformer_model: *transformer_model
-    force_download: *force_download
+    word_embedding: *word_embedding
     shuffle: true
     batch_size: *batch_size   # data loader batch size
     num_workers: *num_workers # data loader num of worker
-    max_len: *max_len
+
 
 
 optimizer:
@@ -98,6 +106,6 @@ trainer:
   save_period: 1
   verbosity: 2
   monitor: "max val_categorical_accuracy"
-  early_stop: 20
+  early_stop: 5
   tensorboard: true
 
