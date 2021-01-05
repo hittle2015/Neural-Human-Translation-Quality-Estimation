@@ -64,9 +64,9 @@ if __name__ == '__main__':
     #run('configs/binary_classification/word_embedding_text_cnn_1d.yml')
     #run('configs/binary_classification/word_embedding_fast_text.yml')
     #run('configs/binary_classification/word_embedding_rnn.yml')
-    #run('configs/binary_classification/word_embedding_cnn_lstm_cat.yml') #cnn and rnn concatenated
-    #run('configs/binary_classification/word_embedding_cnn_lstm_stk.yml') # cnn and rnn stacked
-    run('configs/binary_classification/word_embedding_cnn_lstm_atn.yml') # cnn and rnn stacked with attention
+    #run('configs/binary_classification/word_embedding_cnn_lstm_concatenated.yml') #cnn and rnn concatenated
+    #run('configs/binary_classification/word_embedding_cnn_lstm_stacked.yml') # cnn and rnn stacked
+    run('configs/binary_classification/word_embedding_cnn_lstm_stacked_with_attention.yml') # cnn and rnn stacked with attention
     #run('configs/binary_classification/word_embedding_rcnn.yml')
     #run('configs/binary_classification/word_embedding_rnn_attention.yml')
     #run('configs/binary_classification/word_embedding_dpcnn.yml')
